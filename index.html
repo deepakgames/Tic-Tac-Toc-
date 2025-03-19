@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic-Tac-Toe</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f8ff;
+      margin: 0;
+    }
+    h1 {
+      color: #ff6f61;
+      margin-bottom: 20px;
+    }
+    .mode-buttons {
+      margin-bottom: 20px;
+    }
+    .mode-buttons button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      margin: 5px;
+      cursor: pointer;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+    .mode-buttons button:hover {
+      background-color: #45a049;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 5px;
+      background-color: #333;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+    .cell {
+      width: 100px;
+      height: 100px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2rem;
+      font-weight: bold;
+      background-color: #fff;
+      border: 2px solid #000;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .cell.X {
+      color: red;
+    }
+    .cell.O {
+      color: blue;
+    }
+    .cell:hover {
+      background-color: #e0e0e0;
+    }
+    .message {
+      margin-top: 20px;
+      font-size: 1.5rem;
+      text-align: center;
+      color: #333;
+    }
+    .popup {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      border-radius: 10px;
+    }
+    .popup button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+    .popup button:hover {
+      background-color: #45a049;
+    }
+    .winning-line {
+      background-color: #aaffaa;
+    }
+    .restart-button {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      background-color: #ff6f61;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+      display: none;
+    }
+    .restart-button:hover {
+      background-color: #ff4a3d;
+    }
+    .menu-button {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+      display: none;
+    }
+    .menu-button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tic-Tac-Toe</h1>
+  <div class="mode-buttons" id="mode-buttons">
+    <button onclick="setMode('1-player')">1 Player (vs Bot)</button>
+    <button onclick="setMode('2-player')">2 Players</button>
+  </div>
+  <div id="game" style="display: none;">
+    <div class="board">
+      <div class="cell" data-index="0"></div>
+      <div class="cell" data-index="1"></div>
+      <div class="cell" data-index="2"></div>
+      <div class="cell" data-index="3"></div>
+      <div class="cell" data-index="4"></div>
+      <div class="cell" data-index="5"></div>
+      <div class="cell" data-index="6"></div>
+      <div class="cell" data-index="7"></div>
+      <div class="cell" data-index="8"></div>
+    </div>
+    <div class="message" id="message"></div>
+  </div>
+
+  <!-- Popup for restart -->
+  <div class="popup" id="popup">
+    <p id="popup-message"></p>
+    <button onclick="restartGame()">Restart</button>
+    <button onclick="closePopup()">Close</button>
+  </div>
+
+  <!-- Restart button in top-right corner -->
+  <button class="restart-button" id="restart-button" onclick="restartGame()">Restart Game</button>
+
+  <!-- Menu button in top-left corner -->
+  <button class="menu-button" id="menu-button" onclick="goToMenu()">Menu</button>
+
+  <script>
+    const modeButtons = document.getElementById('mode-buttons');
+    const gameContainer = document.getElementById('game');
+    const board = document.querySelector('.board');
+    const cells = document.querySelectorAll('.cell');
+    const message = document.getElementById('message');
+    const popup = document.getElementById('popup');
+    const popupMessage = document.getElementById('popup-message');
+    const restartButton = document.getElementById('restart-button');
+    const menuButton = document.getElementById('menu-button');
+    let currentPlayer = 'X';
+    let gameActive = true;
+    let mode = null;
+    const winningCombinations = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+      [0, 4, 8], [2, 4, 6]             // Diagonals
+    ];
+    let gameState = ['', '', '', '', '', '', '', '', ''];
+
+    // Function to set the game mode
+    const setMode = (selectedMode) => {
+      mode = selectedMode;
+      modeButtons.style.display = 'none';
+      gameContainer.style.display = 'block';
+      restartButton.style.display = 'block';
+      menuButton.style.display = 'block';
+      restartGame();
+      message.textContent = mode === '1-player' ? 'Your turn (X)' : `Player ${currentPlayer}'s turn`;
+    };
+
+    // Function to handle cell click
+    const handleCellClick = (event) => {
+      const clickedCell = event.target;
+      const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
+
+      if (gameState[clickedCellIndex] !== '' || !gameActive) {
+        return;
+      }
+
+      gameState[clickedCellIndex] = currentPlayer;
+      clickedCell.textContent = currentPlayer;
+      clickedCell.classList.add(currentPlayer); // Add class for color
+
+      const winningLine = checkForWinner();
+      if (winningLine) {
+        highlightWinningLine(winningLine);
+        return;
+      }
+
+      if (mode === '1-player' && currentPlayer === 'X') {
+        currentPlayer = 'O';
+        message.textContent = `Bot's turn`;
+        setTimeout(botMove, 500); // Bot makes a move after a short delay
+      } else {
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        message.textContent = `Player ${currentPlayer}'s turn`;
+      }
+    };
+
+    // Function for bot's move (intelligent)
+    const botMove = () => {
+      if (!gameActive) return;
+
+      // Check if bot can win
+      let move = findWinningMove('O');
+      if (move === null) {
+        // Check if player can win and block them
+        move = findWinningMove('X');
+        if (move === null) {
+          // Choose a random empty cell
+          const emptyCells = gameState.map((val, index) => val === '' ? index : null).filter(val => val !== null);
+          move = emptyCells.length > 0 ? emptyCells[Math.floor(Math.random() * emptyCells.length)] : null;
+        }
+      }
+
+      if (move !== null) {
+        gameState[move] = 'O';
+        cells[move].textContent = 'O';
+        cells[move].classList.add('O'); // Add class for color
+
+        const winningLine = checkForWinner();
+        if (winningLine) {
+          highlightWinningLine(winningLine);
+          return;
+        }
+      }
+
+      currentPlayer = 'X';
+      message.textContent = `Your turn (X)`;
+    };
+
+    // Function to find a winning move for a player
+    const findWinningMove = (player) => {
+      for (let i = 0; i < winningCombinations.length; i++) {
+        const [a, b, c] = winningCombinations[i];
+        if (gameState[a] === player && gameState[b] === player && gameState[c] === '') return c;
+        if (gameState[a] === player && gameState[c] === player && gameState[b] === '') return b;
+        if (gameState[b] === player && gameState[c] === player && gameState[a] === '') return a;
+      }
+      return null;
+    };
+
+    // Function to check for a winner
+    const checkForWinner = () => {
+      for (let i = 0; i < winningCombinations.length; i++) {
+        const [a, b, c] = winningCombinations[i];
+        if (gameState[a] !== '' && gameState[a] === gameState[b] && gameState[b] === gameState[c]) {
+          return [a, b, c];
+        }
+      }
+      if (!gameState.includes('')) {
+        message.textContent = 'It\'s a draw!';
+        popupMessage.textContent = 'It\'s a draw!';
+        showPopup();
+        gameActive = false;
+      }
+      return null;
+    };
+
+    // Function to highlight the winning line
+    const highlightWinningLine = (winningLine) => {
+      winningLine.forEach(index => {
+        cells[index].classList.add('winning-line');
+      });
+      message.textContent = `Player ${currentPlayer} wins!`;
+      popupMessage.textContent = `Player ${currentPlayer} wins!`;
+      showPopup();
+      gameActive = false;
+    };
+
+    // Function to show the popup
+    const showPopup = () => {
+      popup.style.display = 'block';
+    };
+
+    // Function to close the popup
+    const closePopup = () => {
+      popup.style.display = 'none';
+      restartButton.style.display = 'block'; // Show restart button
+    };
+
+    // Function to restart the game
+    const restartGame = () => {
+      gameState = ['', '', '', '', '', '', '', '', ''];
+      cells.forEach(cell => {
+        cell.textContent = '';
+        cell.classList.remove('X', 'O', 'winning-line');
+      });
+      currentPlayer = 'X';
+      gameActive = true;
+      message.textContent = mode === '1-player' ? 'Your turn (X)' : `Player ${currentPlayer}'s turn`;
+      popup.style.display = 'none';
+      restartButton.style.display = 'none'; // Hide restart button
+    };
+
+    // Function to go back to the menu
+    const goToMenu = () => {
+      modeButtons.style.display = 'block';
+      gameContainer.style.display = 'none';
+      restartButton.style.display = 'none';
+      menuButton.style.display = 'none';
+      restartGame();
+    };
+
+    // Add event listeners to cells
+    cells.forEach(cell => {
+      cell.addEventListener('click', handleCellClick);
+    });
+  </script>
+</body>
+</html>
